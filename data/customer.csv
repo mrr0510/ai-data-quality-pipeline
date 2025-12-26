@@ -1,0 +1,6 @@
+customer_id,name,age,email,country
+1,Alice,30,alice@example.com,US
+2,Bob,25,bob@example.com,UK
+3,,40,charlie@example.com,CA
+4,David,-5,david@example.com,US
+5,Eve,abc,eve@example.com,IN
