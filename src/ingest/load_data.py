@@ -1,8 +1,17 @@
 import csv
 from pathlib import Path
+import logging
 
 
 REQUIRED_COLUMNS = {"customer_id", "name", "age", "email", "country"}
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
 
 
 def load_csv(path: Path) -> list[dict]:
@@ -33,7 +42,7 @@ def validate_row(row: dict) -> list[str]:
 
     return errors
 
-
+logger.info("Starting customer CSV ingestion")
 def main():
     data_path = Path("data/customer.csv")
     rows = load_csv(data_path)
@@ -48,12 +57,15 @@ def main():
         else:
             valid_rows.append(row)
 
-    print(f"Valid rows: {len(valid_rows)}")
-    print(f"Invalid rows: {len(invalid_rows)}")
+    logger.info("Valid rows written: %d", len(valid_rows))
+    logger.warning("Invalid rows written: %d", len(invalid_rows))
+
 
     for item in invalid_rows:
         print(item)
 
-
 if __name__ == "__main__":
     main()
+
+logger.info("Ingestion completed successfully")
+
