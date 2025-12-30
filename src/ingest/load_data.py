@@ -1,15 +1,12 @@
 import csv
 import os
-from pathlib import Path
+import json
 import logging
+from pathlib import Path
+
 from src.config.settings import get_config
 
-
 REQUIRED_COLUMNS = {"customer_id", "name", "age", "email", "country"}
-
-
-logger = logging.getLogger(__name__)
-
 
 
 def load_csv(path: Path) -> list[dict]:
@@ -40,16 +37,35 @@ def validate_row(row: dict) -> list[str]:
 
     return errors
 
-logger.info("Starting customer CSV ingestion")
+
+def build_metrics(env: str, total: int, valid: int, invalid: int) -> dict:
+    invalid_pct = (invalid / total * 100) if total > 0 else 0
+
+    return {
+        "environment": env,
+        "total_rows": total,
+        "valid_rows": valid,
+        "invalid_rows": invalid,
+        "invalid_percentage": round(invalid_pct, 2),
+    }
+
+
 def main():
     env = os.getenv("APP_ENV", "dev")
     config = get_config(env)
+
+    # Configure logging FIRST
     logging.basicConfig(
-    level=getattr(logging, config.log_level),
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
+        level=getattr(logging, config.log_level),
+        format="%(asctime)s | %(levelname)s | %(message)s",
+    )
+    logger = logging.getLogger(__name__)
+
+    logger.info("Starting customer CSV ingestion")
+
     data_path = config.data_path
     rows = load_csv(data_path)
+
     valid_rows = []
     invalid_rows = []
 
@@ -60,14 +76,32 @@ def main():
         else:
             valid_rows.append(row)
 
-    logger.info("Valid rows written: %d", len(valid_rows))
-    logger.warning("Invalid rows written: %d", len(invalid_rows))
+    logger.info("Valid rows: %d", len(valid_rows))
+    logger.warning("Invalid rows: %d", len(invalid_rows))
 
+    # Build & write metrics
+    metrics = build_metrics(
+        env=env,
+        total=len(rows),
+        valid=len(valid_rows),
+        invalid=len(invalid_rows),
+    )
+
+    metrics_path = Path("output/metrics/quality_metrics.json")
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(metrics_path, "w") as f:
+        json.dump(metrics, f, indent=2)
+
+    logger.info("Quality metrics written to %s", metrics_path)
+
+    # DEV-only visibility
     if config.show_invalid_rows:
         for item in invalid_rows:
-            print(item)
+            logger.warning("Invalid row detail: %s", item)
+
+    logger.info("Ingestion completed successfully")
+
+
 if __name__ == "__main__":
     main()
-
-logger.info("Ingestion completed successfully")
-
