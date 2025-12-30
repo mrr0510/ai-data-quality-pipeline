@@ -1,4 +1,5 @@
 import csv
+import os
 from pathlib import Path
 import logging
 from src.config.settings import get_config
@@ -6,10 +7,6 @@ from src.config.settings import get_config
 
 REQUIRED_COLUMNS = {"customer_id", "name", "age", "email", "country"}
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +42,14 @@ def validate_row(row: dict) -> list[str]:
 
 logger.info("Starting customer CSV ingestion")
 def main():
-    config = get_config()
-    data_path = config["data_path"]
+    env = os.getenv("APP_ENV", "dev")
+    config = get_config(env)
+    logging.basicConfig(
+    level=getattr(logging, config.log_level),
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+    data_path = config.data_path
     rows = load_csv(data_path)
-
     valid_rows = []
     invalid_rows = []
 
@@ -62,10 +63,9 @@ def main():
     logger.info("Valid rows written: %d", len(valid_rows))
     logger.warning("Invalid rows written: %d", len(invalid_rows))
 
-
-    for item in invalid_rows:
-        print(item)
-
+    if config.show_invalid_rows:
+        for item in invalid_rows:
+            print(item)
 if __name__ == "__main__":
     main()
 
