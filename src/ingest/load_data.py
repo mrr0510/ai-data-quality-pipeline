@@ -54,7 +54,6 @@ def main():
     env = os.getenv("APP_ENV", "dev")
     config = get_config(env)
 
-    # Configure logging FIRST
     logging.basicConfig(
         level=getattr(logging, config.log_level),
         format="%(asctime)s | %(levelname)s | %(message)s",
@@ -79,7 +78,7 @@ def main():
     logger.info("Valid rows: %d", len(valid_rows))
     logger.warning("Invalid rows: %d", len(invalid_rows))
 
-    # Build & write metrics
+    # Metrics
     metrics = build_metrics(
         env=env,
         total=len(rows),
@@ -89,11 +88,37 @@ def main():
 
     metrics_path = Path("output/metrics/quality_metrics.json")
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
-
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=2)
 
     logger.info("Quality metrics written to %s", metrics_path)
+
+    # =========================
+    # QUALITY GATE (FIXED PLACE)
+    # =========================
+    invalid_pct = (
+        len(invalid_rows) / len(rows) * 100
+        if rows else 0
+    )
+
+    logger.info(
+        "Invalid data percentage: %.2f%% (threshold: %.2f%%)",
+        invalid_pct,
+        config.max_invalid_pct
+    )
+
+    if invalid_pct > config.max_invalid_pct:
+        message = (
+            f"Data quality gate failed: "
+            f"{invalid_pct:.2f}% invalid rows "
+            f"(threshold {config.max_invalid_pct}%)"
+        )
+
+        if config.env == "prod":
+            logger.error(message)
+            raise RuntimeError(message)
+        else:
+            logger.warning(message)
 
     # DEV-only visibility
     if config.show_invalid_rows:

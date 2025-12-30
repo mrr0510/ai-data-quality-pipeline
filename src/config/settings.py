@@ -7,6 +7,7 @@ class Config:
     data_path: Path
     log_level: str
     show_invalid_rows: bool
+    max_invalid_pct: float
 
 def get_config(env: str = "dev") -> Config:
     if env == "prod":
@@ -14,7 +15,8 @@ def get_config(env: str = "dev") -> Config:
             env="prod",
             data_path= Path("data/customer.csv"),
             log_level="WARNING",
-            show_invalid_rows=False
+            show_invalid_rows=False,
+            max_invalid_pct=20.0
         )
 
     # dev (default)
@@ -22,6 +24,7 @@ def get_config(env: str = "dev") -> Config:
         env="dev",
         data_path=Path("data/customer.csv"),
         log_level="INFO",
-        show_invalid_rows=True
+        show_invalid_rows=True,
+        max_invalid_pct=50.0
     )
 
